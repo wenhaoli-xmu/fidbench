@@ -14,6 +14,7 @@ for base in "${bases[@]}"; do
 
     # baseline 
     test_script="${base}.json"
+    echo -e "\033[34mRunning prediction for ${test_script}...\033[0m"
     python pred.py --env_conf "runs/${test_script}" --max_gen 128
 
     for method in "${methods[@]}"; do
@@ -23,6 +24,7 @@ for base in "${bases[@]}"; do
         python pred.py --env_conf "runs/${test_script}" --max_gen 128
         echo "Finished processing ${test_script}."
         echo "-----------------------------------"
+        echo -e "\033[34m Results of ${base} [${method}]\033[0m"
         python test_sim.py pred/runs/${base} pred/runs/${base}-${method}
         echo "-----------------------------------"
 
