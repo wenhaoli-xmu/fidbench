@@ -1,0 +1,6 @@
+transformers==4.45
+torch
+datasets
+pygments
+accelerate
+peft

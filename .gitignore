@@ -1,0 +1,28 @@
+# checkpoints & model files
+train_results/*
+!train_results/convert.py
+models
+
+# datasets
+mmlu/data
+mmlu/data.tar
+mmlu/output
+data
+buffer
+
+# outputs
+pred
+pred_e
+pred2
+
+# misc
+*.egg-info
+*.pyc
+lm-corpus
+lm-profiler
+lsh_kernel
+.vscode/
+**/.DS_Store
+**/__pycache__
+**/build
+*.so
