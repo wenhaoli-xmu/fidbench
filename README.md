@@ -82,17 +82,13 @@ pip install -r requirement.txt
    ```
 
 
-2. 修改`fidbench/modifiers/__init__.py`, 注册 GreedyGeneration类
+2. 修改`fidbench/modifiers/__init__.py`, 注册XXXMethod类
    ```python
    def get_modifier(method: str):
 
     if method == "origin":
         from .origin import Origin
         return Origin
-    
-    if method == 'greedy':
-        from .greedy import Greedy
-        return Greedy
     
     elif method == 'topk-llama':
         from .topk import Topk
