@@ -22,7 +22,7 @@ pip install -r requirement.txt
    from ..modifier import Modifier
    import torch
 
-   class GreedyGeneration(Modifier):
+   class XXXMethod(Modifier):
 
       def __init__(self, model, save_ckp=None, load_ckp=None, config=None):
 
@@ -43,38 +43,42 @@ pip install -r requirement.txt
       def reset(self):
          pass
 
-      # 这个必须有，输入参数必须保证至少有input_ids, max_new_tokens以及eos_token_id三个
+      # 这个必须有，输入为p_ids (prefilling tokens) 以及 g_ids (generation tokens)，分别对应上下文，以及base model生成的那部分
       @torch.no_grad()
-      def generate(self, input_ids, max_new_tokens=128, eos_token_id=2):
+      def compute_accuracy(self, p_ids, g_ids):
 
-         if isinstance(input_ids, list):
-               input_ids = torch.tensor(input_ids, dtype=torch.int64)[None, :]
+         assert p_ids.shape[0] == 1, 'only support batch size 1'
+         assert p_ids.ndim == 2 and g_ids.ndim == 2
 
-         if input_ids.ndim == 3:
-               input_ids = input_ids.flatten(0,1)
-
-         # put the tensor on to the model's device
          device = next(iter(self.model.parameters())).device
-         input_ids = input_ids.to(device)
+         p_ids, g_ids = p_ids.to(device), g_ids.to(device)
 
-         # fake prefilling
-         output = self.model(input_ids=input_ids[:, :128])
-         logits, past_key_values = output.logits, output.past_key_values
+         # pre-fill, 可能要变动
+         output = self.model(input_ids=p_ids)
+         kv_cache = output.past_key_values
 
-         new_tok = logits.argmax(dim=-1)
-         new_ids = [new_tok]
+         acc1, acc5 = 0, 0
+         turns = g_ids.shape[-1] - 1
 
-         while len(new_ids) < max_new_tokens:
-               output = self.model.model(input_ids=new_tok, past_key_values=past_key_values)
-               logits, past_key_values = output.logits, output.past_key_values
+         for tok, label in zip(
+                  torch.chunk(g_ids[:, :-1], turns, dim=-1), 
+                  torch.chunk(g_ids[:, 1:], turns, dim=-1)):
 
-               new_tok = logits.argmax(dim=-1)
-               if new_tok.ravel().item() in eos_token_id:
-                  break
+               # generation, 可能要变动
+               output = self.model(input_ids=tok, kv_cache=kv_cache)
+               logits, kv_cache = output.logits, output.past_key_values
 
-               new_ids.append(new_tok.to(input_ids.device))
+               label = label.ravel().item()
+               next_1 = logits.argmax(dim=-1).ravel().item()
+               next_5 = logits.topk(k=5, dim=-1).indices.ravel().tolist()
 
-         return torch.cat([input_ids, *new_ids], dim=-1)
+               acc1 += next_1 == label
+               acc5 += label in next_5
+
+         acc1 /= turns
+         acc5 /= turns
+
+         return acc1, acc5
    ```
 
 
@@ -99,38 +103,35 @@ pip install -r requirement.txt
         return Topk
 
     # 添加在了这里!!!
-    elif method == 'greedy-gen':
-        from .greedy_gen import GreedyGeneration
-        return GreedyGeneration
+    elif method == 'xxxmethod':
+        from .xxxmethod import XXXMethod
+        return XXXMethod
     
     else:
         raise NotImplementedError(method)
    ```
 
-3. 在runs文件夹中添加对应的运行配置文件 `llama3.1-8b-instruct-greedy_gen.json`
+3. 在runs文件夹中添加对应的运行配置文件 `llama3.1-8b-instruct-xxxmethod.json`
 
    注意名字必须是 `{model_name}-{method}.json`格式的，方便批处理
-   ```python
+   ```json
    {
       "model": {
          "model_name": "/mnt/petrelfs/share_data/ai4good_shared/models/meta-llama/Llama-3.1-8B-Instruct",
          "model_dtype": "bf16",
-         "model_method": "greedy-gen", # 对应上一步的注册
+         "model_method": "xxxmethod", # 对应上一步的注册
          "save_ckp": null,
          "load_ckp": null,
-         "config": "config/greedy-gen.json", # 这个是配置文件，如果没有配置，则设置为null
+         "config": "config/xxxmethod.json" | null, # 这个是配置文件，如果没有配置，则设置为null
          "device_map": null,
          "max_length": 131072
-      },
-
-      # 这个可以根据需要来设置，会自动被送进generation()方法中作为额外的参数
-      "generation_kwargs": {}
+      }
    }
    ```
 
 4. 运行
 
-   在`pred.sh`中添加greedy_gen方法
+   在`pred.sh`中添加xxxmethod方法
    ```bash
       bases=(
       "llama3.1-8b-instruct"
@@ -138,6 +139,6 @@ pip install -r requirement.txt
 
    methods=(
       "topk"
-      "greedy_gen" # 新增加
+      "xxxmethod" # 新增加
    )
    ```
