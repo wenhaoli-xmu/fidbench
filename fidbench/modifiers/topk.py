@@ -362,34 +362,38 @@ class Topk(Modifier):
 
     def ft_params(self):
         return self.model.ft_params()
-
+    
 
     @torch.no_grad()
-    def generate(self, input_ids, max_new_tokens=128, eos_token_id=2):
+    def compute_accuracy(self, p_ids, g_ids):
 
-        if input_ids.ndim == 3:
-            input_ids = input_ids.flatten(0,1)
+        assert p_ids.shape[0] == 1, 'only support batch size 1'
+        assert p_ids.ndim == 2 and g_ids.ndim == 2
 
-        # put the tensor on to the model's device
         device = next(iter(self.model.parameters())).device
-        input_ids = input_ids.to(device)
+        p_ids, g_ids = p_ids.to(device), g_ids.to(device)
 
-        # prefilling
-        output = self.model(input_ids=input_ids)
-        logits, kv_cache = output.logits, output.past_key_values
-        new_tok = logits.argmax(dim=-1)
-        new_ids = [new_tok]
+        output = self.model(input_ids=p_ids)
+        kv_cache = output.past_key_values
 
-        # generation
-        while len(new_ids) < max_new_tokens:
-            output = self.model(input_ids=new_tok, kv_cache=kv_cache)
+        acc1, acc5 = 0, 0
+        turns = g_ids.shape[-1] - 1
+
+        for tok, label in zip(
+                torch.chunk(g_ids[:, :-1], turns, dim=-1), 
+                torch.chunk(g_ids[:, 1:], turns, dim=-1)):
+
+            output = self.model(input_ids=tok, kv_cache=kv_cache)
             logits, kv_cache = output.logits, output.past_key_values
 
-            new_tok = logits.argmax(dim=-1)
-            if new_tok.ravel().item() == eos_token_id: 
-                break
+            label = label.ravel().item()
+            next_1 = logits.argmax(dim=-1).ravel().item()
+            next_5 = logits.topk(k=5, dim=-1).indices.ravel().tolist()
 
-            new_ids.append(new_tok.ravel().item())
+            acc1 += next_1 == label
+            acc5 += label in next_5
 
-        new_ids = torch.tensor(new_ids, dtype=input_ids.dtype, device=input_ids.device)[None, :]
-        return torch.cat([input_ids, new_ids], dim=-1)
+        acc1 /= turns
+        acc5 /= turns
+
+        return acc1, acc5

@@ -85,6 +85,42 @@ def pred(
                 fo.write(post_process(pred) + '\n')
 
 
+def compute_accuracy( 
+        tokenizer, 
+        model,
+        data_path,
+        ref_path,
+        model_max_length):
+    
+
+    acc1_list = []
+    acc5_list = []
+
+    with open(data_path, 'r') as f, open(ref_path, 'r') as r:
+        for line, label in zip(f, r):
+            chats = json.loads(line)['conversations']
+
+            if tokenizer.chat_template is None:
+                log_warning('No chat template provided in `tokenizer_config.json`, use default chat template.')
+                tokenizer.chat_template = default_template
+            
+            input_ids = tokenizer.apply_chat_template(chats, return_tensors='pt', add_generation_prompt=True)
+            refer_ids = tokenizer(label, return_tensors='pt', add_special_tokens=False).input_ids
+
+            max_possible_length = input_ids.shape[-1] + refer_ids.shape[-1]
+            if max_possible_length >= model_max_length:
+                log_exceed(max_possible_length, model_max_length)
+
+            acc1, acc5 = model.compute_accuracy(
+                p_ids=input_ids,
+                g_ids=refer_ids)
+            
+            acc1_list.append(acc1)
+            acc5_list.append(acc5)
+
+    return acc1_list, acc5_list
+
+
 def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -101,6 +137,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--env_conf", type=str, default=None)
     parser.add_argument("--max_gen", type=int, default=None)
+    parser.add_argument("--label", type=str, default=None)
     args = parser.parse_args()
     
     with open(args.env_conf, "r") as f:
@@ -116,8 +153,6 @@ if __name__ == '__main__':
         if 'jsonl' not in path:
             continue
 
-        log_info(f"Processing `{path}` ...")
-
         data_path = os.path.join('data', path)
         out_path = os.path.join("pred", run_name, path.replace('.jsonl', '.txt'))
 
@@ -125,11 +160,23 @@ if __name__ == '__main__':
             os.remove(out_path)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-        pred(
-            tokenizer,
-            model,
-            data_path,
-            out_path,
-            max_gen=args.max_gen,
-            model_max_length=env_conf['model']['max_length'],
-            **env_conf['generation_kwargs'])
+        if args.label is not None:
+            ref_path = os.path.join(args.label, path.replace('jsonl', 'txt'))
+            acc1, acc5 = compute_accuracy(
+                tokenizer,
+                model,
+                data_path,
+                ref_path,
+                env_conf['model']['max_length'])
+            acc1 = sum(acc1) / len(acc1)
+            acc5 = sum(acc5) / len(acc5)
+            log_info(f"{path.replace('.jsonl', ''):^20}\t{colorize('yellow','Acc@1:')} {acc1:.5f}\t{colorize('yellow','Acc@5:')} {acc5:.5f}")
+        else:
+            pred(
+                tokenizer,
+                model,
+                data_path,
+                out_path,
+                max_gen=args.max_gen,
+                model_max_length=env_conf['model']['max_length'],
+                **env_conf['generation_kwargs'])
