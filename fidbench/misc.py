@@ -268,31 +268,31 @@ def get_model_and_tokenizer(
     student_dtype = get_torch_dtype(model_dtype)
     
     # 检查是否使用4bit量化
-    # if model_method == "qInt4bit":
-    #     print("using 4bit quantization")
-    #     # 配置4bit量化参数
-    #     quantization_config = BitsAndBytesConfig(
-    #         load_in_4bit=True,
-    #         bnb_4bit_compute_dtype=student_dtype,
-    #         bnb_4bit_use_double_quant=True,
-    #         bnb_4bit_quant_type="nf4"
-    #     )
+    if model_method == "qInt4bit":
+        print("using 4bit quantization")
+        # 配置4bit量化参数
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=student_dtype,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4"
+        )
         
-    #     student = AutoModelForCausalLM.from_pretrained(
-    #         model_name, 
-    #         quantization_config=quantization_config,
-    #         torch_dtype=student_dtype, 
-    #         device_map="auto" if device_map is None else None,
-    #         trust_remote_code=True
-    #     )
-    # else:
-    # 原有的加载方式
-    student = AutoModelForCausalLM.from_pretrained(
-        model_name, 
-        torch_dtype=student_dtype, 
-        device_map="auto" if device_map is None else None,
-        trust_remote_code=True
-    )
+        student = AutoModelForCausalLM.from_pretrained(
+            model_name, 
+            quantization_config=quantization_config,
+            torch_dtype=student_dtype, 
+            device_map="auto" if device_map is None else None,
+            trust_remote_code=True
+        )
+    else:
+        # 原有的加载方式
+        student = AutoModelForCausalLM.from_pretrained(
+            model_name, 
+            torch_dtype=student_dtype, 
+            device_map="auto" if device_map is None else None,
+            trust_remote_code=True
+        )
     
     student_modifier = get_modifier(model_method)
 
