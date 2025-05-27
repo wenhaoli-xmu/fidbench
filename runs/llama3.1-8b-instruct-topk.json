@@ -1,6 +1,6 @@
 {
     "model": {
-        "model_name": "/mnt/petrelfs/share_data/ai4good_shared/models/meta-llama/Llama-3.1-8B-Instruct",
+        "model_name": "/mnt/bn/ywh/hfhome/meta-llama/Llama-3.1-8B-Instruct",
         "model_dtype": "bf16",
         "model_method": "topk-llama",
         "save_ckp": null,

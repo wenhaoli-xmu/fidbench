@@ -2,7 +2,7 @@
     "model": {
         "model_name": "/mnt/bn/ywh/hfhome/meta-llama/Llama-3.1-8B-Instruct",
         "model_dtype": "bf16",
-        "model_method": "origin",
+        "model_method": "qInt4bit",
         "save_ckp": null,
         "load_ckp": null,
         "config": null,

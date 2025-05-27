@@ -135,9 +135,9 @@ if __name__ == '__main__':
     seed_everything(42)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env_conf", type=str, default=None)
-    parser.add_argument("--max_gen", type=int, default=None)
-    parser.add_argument("--label", type=str, default=None)
+    parser.add_argument("--env_conf", type=str, default='/mnt/bn/ywh/fidbench/runs/llama3.1-8b-instruct-qInt4bit.json')
+    parser.add_argument("--max_gen", type=int, default=128)
+    parser.add_argument("--label", type=str, default='/mnt/bn/ywh/fidbench/pred/runs/llama3.1-8b-instruct')
     args = parser.parse_args()
     
     with open(args.env_conf, "r") as f:
@@ -155,6 +155,8 @@ if __name__ == '__main__':
 
         data_path = os.path.join('data', path)
         out_path = os.path.join("pred", run_name, path.replace('.jsonl', '.txt'))
+        print("data_path: ", data_path)
+        print("out_path: ", out_path)
 
         if os.path.exists(out_path):
             os.remove(out_path)

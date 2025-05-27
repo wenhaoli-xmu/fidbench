@@ -12,5 +12,13 @@ def get_modifier(method: str):
         from .topk import Topk
         return Topk
     
+    elif method == 'qInt4bit':
+        from.quantization import QuantizedInference
+        return QuantizedInference
+    
+    elif method == 'speculativeDecoding':
+        from.speculative_decoding import SpeculativeDecoding
+        return SpeculativeDecoding
+
     else:
         raise NotImplementedError(method)

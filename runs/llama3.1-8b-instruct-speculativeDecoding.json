@@ -2,16 +2,13 @@
     "model": {
         "model_name": "/mnt/bn/ywh/hfhome/meta-llama/Llama-3.1-8B-Instruct",
         "model_dtype": "bf16",
-        "model_method": "origin",
+        "model_method": "speculativeDecoding",
         "save_ckp": null,
         "load_ckp": null,
-        "config": null,
+        "config": "config/speculativeDecoding.json",
         "device_map": null,
         "max_length": 131072
     },
 
-    "generation_kwargs": {
-        "do_sample": false,
-        "temperature": 0.0
-    }
+    "generation_kwargs": {}
 }

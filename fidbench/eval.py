@@ -1,6 +1,6 @@
 from itertools import chain
 from .data import get_corpus
-from lm_eval.metrics import perplexity
+# from lm_eval.metrics import perplexity
 from torch.utils.data import DataLoader
 import torch
 import tqdm
