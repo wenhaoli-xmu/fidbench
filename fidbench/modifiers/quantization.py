@@ -38,10 +38,6 @@ class QuantizedInference(Modifier):
         output = self.model(input_ids=p_ids)
         kv_cache = output.past_key_values
 
-        print(f"p_ids shape: {p_ids.shape}, g_ids shape: {g_ids.shape}")
-        print(f"p_ids content (first 10): {p_ids[:, :10]}")
-        print(f"g_ids content (first 10): {g_ids[:, :10]}")
-
         acc1, acc5 = 0, 0
         turns = g_ids.shape[-1] - 1
 
@@ -49,7 +45,6 @@ class QuantizedInference(Modifier):
             print(f"Warning: turns is {turns}, g_ids shape is {g_ids.shape}. Returning 0 accuracy.")
             return 0.0, 0.0
 
-        print(f"Initial turns: {turns}")
 
         for i, (tok, label_tensor) in enumerate(zip(
                 torch.chunk(g_ids[:, :-1], turns, dim=-1), 
@@ -63,21 +58,14 @@ class QuantizedInference(Modifier):
                 next_1 = logits.argmax(dim=-1).ravel().item()
                 next_5 = logits.topk(k=5, dim=-1).indices.ravel().tolist()
 
-                print(f"Turn {i+1}:")
-                print(f"  tok: {tok}")
-                print(f"  label: {label}")
-                print(f"  next_1: {next_1}")
-                print(f"  next_5: {next_5}")
-                print(f"  logits (shape): {logits.shape}") # Added logits shape
-
                 acc1 += next_1 == label
                 acc5 += label in next_5
 
-        print(f"Final raw acc1: {acc1}, acc5: {acc5}, turns: {turns}")
+        # print(f"Final raw acc1: {acc1}, acc5: {acc5}, turns: {turns}")
 
         acc1_val = acc1 / turns if turns > 0 else 0.0
         acc5_val = acc5 / turns if turns > 0 else 0.0
 
-        print(f"Calculated acc1: {acc1_val}, acc5: {acc5_val}")
+        # print(f"Calculated acc1: {acc1_val}, acc5: {acc5_val}")
 
         return acc1_val, acc5_val

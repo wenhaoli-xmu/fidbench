@@ -9,8 +9,8 @@ bases=(
 
 methods=(
     # "qInt4bit"
-    # "speculativeDecoding"
-    "topk"
+    "speculativeDecoding"
+    # "topk"
     # "origin"
 )
 
