@@ -79,6 +79,31 @@ pip install -r requirement.txt
          acc5 /= turns
 
          return acc1, acc5
+
+   # 这个也必须有，输入为input_ids
+   @torch.no_grad()
+   def compute_ppl(self, input_ids):
+      assert input_ids.shape[0] == 1, 'only support batch size 1'
+      assert input_ids.ndim == 2
+
+      device = next(iter(self.model.parameters())).device
+      input_ids = input_ids.to(device)
+
+      output = self.model(input_ids=input_ids)
+      logits = output.logits
+
+      shift_logits = logits[:, :-1, :].contiguous()
+      shift_labels = input_ids[:, 1:].contiguous()
+
+      loss = F.cross_entropy(
+         shift_logits.view(-1, shift_logits.size(-1)),
+         shift_labels.view(-1),
+         reduction='mean'
+      )
+
+      ppl = torch.exp(loss).item()
+
+      return ppl
    ```
 
 
@@ -125,7 +150,7 @@ pip install -r requirement.txt
    }
    ```
 
-4. 运行
+4. 测试accuracy
 
    在`pred.sh`中添加xxxmethod方法
    ```bash
@@ -137,4 +162,19 @@ pip install -r requirement.txt
       "topk"
       "xxxmethod" # 新增加
    )
+   ```
+
+5. 测试perplexity
+
+   在`perplexity.sh`中添加xxxmethod方法
+   ```bash
+   bases=(
+      "llama3.1-8b-instruct"
+   )
+
+   methods=(
+      "topk"
+      "xxxmethod" # 新增加
+   )
+   
    ```
