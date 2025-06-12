@@ -1,0 +1,15 @@
+{
+    "model": {
+      "model_name": "/fs-computility/ai4phys/wangweida/Llama-3.1-8B-Instruct",
+      "model_dtype": "bf16",
+      "model_method": "gptq",
+      "save_ckp": "checkpoints/llama3.1-8b-gptq",  
+      "load_ckp": "checkpoints/llama3.1-8b-gptq",   
+      "config": "config/gptq.json",
+      "device_map": null,
+      "max_length": 131072
+    },
+    "generation_kwargs": {}
+
+  }
+  

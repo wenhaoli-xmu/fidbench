@@ -1,0 +1,6 @@
+{
+  "w_bit": 4,
+  "q_group_size": 128,
+  "zero_point": true,
+  "version": "GEMM"
+}

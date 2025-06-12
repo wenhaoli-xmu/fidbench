@@ -235,6 +235,7 @@ def get_model_and_tokenizer(
     if student_modifier is not None:
         student = student_modifier(
             student,
+            tokenizer,
             save_ckp=save_ckp,
             load_ckp=load_ckp,
             config=config)

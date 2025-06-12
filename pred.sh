@@ -7,7 +7,9 @@ bases=(
 )
 
 methods=(
-    "topk"
+    # "topk"
+    # "gptq"
+    "awq"
 )
 
 
@@ -17,7 +19,7 @@ for base in "${bases[@]}"; do
     # baseline 
     test_script="${base}.json"
     echo -e "\033[34mRunning prediction for ${test_script}...\033[0m"
-    python pred.py --env_conf "runs/${test_script}" --max_gen $max_gen
+    # python pred.py --env_conf "runs/${test_script}" --max_gen $max_gen
 
     for method in "${methods[@]}"; do
         test_script="${base}-${method}.json"

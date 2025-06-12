@@ -1,6 +1,10 @@
-transformers==4.45
 torch
+transformers==4.45
 datasets
 pygments
 accelerate
 peft
+bs4
+flash-attn
+optimum
+auto_gptq

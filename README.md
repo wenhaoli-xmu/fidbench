@@ -5,7 +5,7 @@
 ```
 cd fidbench
 pip install -e .
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ## 添加新压缩方法
