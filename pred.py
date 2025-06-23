@@ -8,6 +8,8 @@ from fidbench.misc import get_model_and_tokenizer
 
 from pygments.console import colorize
 from utils import process_doc as post_process
+import transformers
+transformers.logging.set_verbosity_error()
 
 
 def log_exceed(l, max_l):
@@ -71,24 +73,28 @@ def pred(
             if max_possible_length >= model_max_length:
                 log_exceed(max_possible_length, model_max_length)
 
+            # work around for tokenizer without pad token
+            if tokenizer.pad_token_id == None:
+                tokenizer.pad_token_id = tokenizer.eos_token_id
+
             output_ids = model.generate(
-                input_ids, 
-                max_new_tokens=max_gen, 
-                eos_token_id=tokenizer.eos_token_id,
+                input_ids.cuda(), 
+                max_new_tokens=max_gen,
                 **generation_kwargs)
+
             output_ids = output_ids.ravel().tolist()
             output_ids = output_ids[input_ids.shape[-1]:]
             
-            pred = tokenizer.decode(output_ids, skip_special_tokens=True)
-            
+            in_and_out = dict(
+                p_ids=input_ids.ravel().tolist(),
+                g_ids=output_ids)
+
             with open(out_path, 'a+') as fo:
-                fo.write(post_process(pred) + '\n')
+                fo.write(json.dumps(in_and_out) + '\n')
 
 
 def compute_accuracy( 
-        tokenizer, 
         model,
-        data_path,
         ref_path,
         model_max_length):
     
@@ -96,16 +102,11 @@ def compute_accuracy(
     acc1_list = []
     acc5_list = []
 
-    with open(data_path, 'r') as f, open(ref_path, 'r') as r:
-        for line, label in zip(f, r):
-            chats = json.loads(line)['conversations']
-
-            if tokenizer.chat_template is None:
-                log_warning('No chat template provided in `tokenizer_config.json`, use default chat template.')
-                tokenizer.chat_template = default_template
-            
-            input_ids = tokenizer.apply_chat_template(chats, return_tensors='pt', add_generation_prompt=True)
-            refer_ids = tokenizer(label, return_tensors='pt', add_special_tokens=False).input_ids
+    with open(ref_path, 'r') as f:
+        for line in f:
+            in_and_out = json.loads(line)
+            input_ids = torch.tensor(in_and_out['p_ids']).unsqueeze(0)
+            refer_ids = torch.tensor(in_and_out['g_ids']).unsqueeze(0)
 
             max_possible_length = input_ids.shape[-1] + refer_ids.shape[-1]
             if max_possible_length >= model_max_length:
@@ -138,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument("--env_conf", type=str, default=None)
     parser.add_argument("--max_gen", type=int, default=None)
     parser.add_argument("--label", type=str, default=None)
+    parser.add_argument("--force-recompute", action='store_true')
     args = parser.parse_args()
     
     with open(args.env_conf, "r") as f:
@@ -154,24 +156,22 @@ if __name__ == '__main__':
             continue
 
         data_path = os.path.join('data', path)
-        out_path = os.path.join("pred", run_name, path.replace('.jsonl', '.txt'))
-
-        if os.path.exists(out_path):
-            os.remove(out_path)
+        out_path = os.path.join("pred", run_name, path)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
         if args.label is not None:
-            ref_path = os.path.join(args.label, path.replace('jsonl', 'txt'))
+            ref_path = os.path.join(args.label, path)
             acc1, acc5 = compute_accuracy(
-                tokenizer,
                 model,
-                data_path,
                 ref_path,
                 env_conf['model']['max_length'])
             acc1 = sum(acc1) / len(acc1)
             acc5 = sum(acc5) / len(acc5)
             log_info(f"{path.replace('.jsonl', ''):^20}\t{colorize('yellow','Acc@1:')} {acc1:.5f}\t{colorize('yellow','Acc@5:')} {acc5:.5f}")
         else:
+            if os.path.exists(out_path) and not args.force_recompute:
+                log_info(f"Skip {path} since {out_path} exists.")
+                continue
             pred(
                 tokenizer,
                 model,

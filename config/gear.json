@@ -1,0 +1,19 @@
+{
+    "attention_number": 40,
+    "quantize_bit": 2,
+    "group_size": 64,
+    "loop": 3,
+    "prefillrank": 4,
+    "prefillrankv": 4, 
+    "rank": 2,
+    "rankv": 2,
+    "left": 0.02,
+    "streaming": true,
+    "streaming_gap": 64,
+    "merge_group_k": 0.0,
+    "merge_group_v": 0.0,
+    "group_num": 0,
+    "top_kprun": 0.0,
+    "gpu": 0,
+    "stream_grouping": false
+}

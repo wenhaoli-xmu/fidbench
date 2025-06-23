@@ -178,3 +178,118 @@ pip install -r requirement.txt
    )
    
    ```
+
+
+## 已有方法
+
+1. TransMLA
+   ```bash
+   conda create -n transmla python=3.12.8
+   conda activate transmla
+   ```
+
+   ```bash
+   cd thirdparty/TransMLA
+   pip install -r requirements.txt
+   ```
+
+   转换模型参数
+   ```
+   bash scripts/convert/qwen2.5-7B-Instruct.sh
+   ```
+
+2. SageAttention2
+   ```bash
+   conda create -n transmla
+   conda activate sageattn
+   ```
+   ```bash
+   cd thirdparty/SageAttention
+   python setup.py install
+   ```
+
+3. FlashAttention FP8
+   Enviromental requiremnt: `CUDA==12.8`
+   ```bash
+   conda create -n transmla
+   conda activate fp8
+   ```
+   ```
+   cd thirdparty/flash-attention
+   git submodule update --init csrc/cutlass
+   cd hopper
+   python setup.py install
+   ```
+
+4. SpargeAttention
+   Environment requirements:
+   `python>=3.9`, `torch>=2.3.0`, `CUDA>=12.8` for Blackwell, `>=12.4` for fp8 support on Ada, `>=12.3` for fp8 support on Hopper, `>=12.0` for Ampere
+   ```bash
+   conda create -n spargeattn --clone transmla
+   conda activate spargeattn
+   ```
+
+   ```bash
+   cd thirdparty/SpargeAttn
+   pip install ninja
+   python setup.py install
+   ```
+
+5. Medusa
+   Data Prepare
+   ```bash
+   cd thirdparty/Medusa
+   mkdir data
+   huggingface-cli download Aeala/ShareGPT_Vicuna_unfiltered --repo-type dataset --include ShareGPT_V4.3_unfiltered_cleaned_sp
+lit.json
+   ```
+
+   训练
+   ```
+   pip install transformers==4.37.2
+   mv /mnt/petrelfs/liwenhao/fidbench/thirdparty/Medusa/medusa/train/train_legacy.py /mnt/petrelfs/liwenhao/fidbench/thirdparty/Medusa/medusa/train/train.py
+   ```
+
+   medusa_model.py里面要改动 LlamaAttention里的
+   ```bash
+   self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=True)
+   self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+   self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+   self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
+   ```
+
+   在medusa_model.py的最末尾写死使用LLaMA结构进行读取
+   ```
+   class MedusaModel():
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path,
+        *args,
+        **kwargs,
+    ):
+        # Manually load config to ensure that the medusa_num_heads parameter is loaded
+        try:
+            config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
+        except:
+            # MEDUSA-v0.1 load
+            config = MedusaConfig.from_pretrained(pretrained_model_name_or_path)
+            base_model_config = AutoConfig.from_pretrained(config.base_model_name_or_path)
+            config.model_type = base_model_config.model_type
+
+        return MedusaModelLlama.from_pretrained(
+            pretrained_model_name_or_path,
+            *args,
+            **kwargs,
+        )
+   ```
+
+   medusa_model.py里面去掉所有的self.pretrain_tp相关的
+   
+
+6. Dejavu
+   创建新的环境并安装依赖
+   ```bash
+   pip install cupy-cuda12x
+   python -m cupyx.tools.install_library --cuda 12.x --library nccl
+   ```

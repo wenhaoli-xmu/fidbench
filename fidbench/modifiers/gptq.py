@@ -1,25 +1,28 @@
+import os
+import shutil
 from ..modifier import Modifier
-
 import torch
 import torch.nn.functional as F
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-class Origin(Modifier):
+class GPTQMethod(Modifier):
+
     def __init__(self, model, save_ckp, load_ckp, config):
+        model_path = model.config._name_or_path
+        del model
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            torch_dtype='auto',
+            device_map='auto')
+
         super().__init__(model, save_ckp, load_ckp)
 
-
     def ft_params(self):
-        return []
+        return []                
 
-    
     def reset(self):
         pass
-
-
-    def forward(self, *args, **kwargs):
-        return self.model(*args, **kwargs)
-    
 
     @torch.no_grad()
     def compute_accuracy(self, p_ids, g_ids):
@@ -31,7 +34,7 @@ class Origin(Modifier):
         p_ids, g_ids = p_ids.to(device), g_ids.to(device)
 
         output = self.model(input_ids=p_ids)
-        kv_cache = output.past_key_values
+        pkv      = output.past_key_values      
 
         acc1, acc5 = 0, 0
         turns = g_ids.shape[-1] - 1
@@ -40,8 +43,8 @@ class Origin(Modifier):
                 torch.chunk(g_ids[:, :-1], turns, dim=-1), 
                 torch.chunk(g_ids[:, 1:], turns, dim=-1)):
 
-            output = self.model(input_ids=tok, past_key_values=kv_cache)
-            logits, kv_cache = output.logits, output.past_key_values
+            output = self.model(input_ids=tok, past_key_values=pkv)
+            logits, pkv = output.logits, output.past_key_values
 
             label = label.ravel().item()
             next_1 = logits.argmax(dim=-1).ravel().item()
@@ -54,7 +57,6 @@ class Origin(Modifier):
         acc5 /= turns
 
         return acc1, acc5
-
 
     @torch.no_grad()
     def compute_ppl(self, input_ids):

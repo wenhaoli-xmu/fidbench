@@ -1,0 +1,4 @@
+{"conversations": [{"role": "user", "content": "#include <stdio.h>  int main() { int array[] = {1, 2, 3, 4, 5}; int n = 5; int i; // TODO for (i = 0; i <= n; i++) { printf(\"%d\\n\", array[i]); } return 0; }, Use the function to debug the given program and prevent the segmentation fault."}]}
+{"conversations": [{"role": "user", "content": "numbers = [] for i in range(10): if i % 2 == 0: numbers.append(i) Re-write the code segment as a list comprehension."}]}
+{"conversations": [{"role": "user", "content": "$input_array = array(1,2,3,4,5); $item_to_check = 3; Create a PHP code to check if an array contains a given item."}]}
+{"conversations": [{"role": "user", "content": "Write a code to convert a given spredsheet in csv format to json format."}]}

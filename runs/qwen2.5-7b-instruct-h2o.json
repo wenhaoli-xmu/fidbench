@@ -1,0 +1,14 @@
+{
+    "model": {
+        "model_name": "/mnt/petrelfs/share_data/wangweiyun/share_ckpt_hf/Qwen2.5-7B-Instruct",
+        "model_dtype": "bf16",
+        "model_method": "h2o",
+        "save_ckp": null,
+        "load_ckp": null,
+        "config": "config/h2o.json",
+        "device_map": null,
+        "max_length": 32768
+    },
+
+    "generation_kwargs": {}
+}

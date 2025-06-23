@@ -7,7 +7,6 @@ models
 mmlu/data
 mmlu/data.tar
 mmlu/output
-data
 buffer
 
 # outputs
@@ -26,3 +25,7 @@ lsh_kernel
 **/__pycache__
 **/build
 *.so
+clean.py
+clean_v2.py
+convert.py
+thirdparty

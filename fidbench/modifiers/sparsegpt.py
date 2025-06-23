@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 
 
-class Origin(Modifier):
+class SparseGPT(Modifier):
     def __init__(self, model, save_ckp, load_ckp, config):
         super().__init__(model, save_ckp, load_ckp)
 
@@ -19,7 +19,7 @@ class Origin(Modifier):
 
     def forward(self, *args, **kwargs):
         return self.model(*args, **kwargs)
-    
+
 
     @torch.no_grad()
     def compute_accuracy(self, p_ids, g_ids):

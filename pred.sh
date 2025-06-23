@@ -3,13 +3,12 @@
 max_gen=128
 
 bases=(
-    "llama3.1-8b-instruct"
+    "qwen2.5-7b-instruct"
 )
 
 methods=(
-    "topk"
+    "sparsegpt"
 )
-
 
 # compression methods
 for base in "${bases[@]}"; do
