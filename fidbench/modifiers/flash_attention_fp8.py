@@ -84,7 +84,11 @@ def self_attn_forward(self, hidden_states, kv_cache):
     kv_cache = (keys, vals)
 
     # attention computation
-    attn_output = flash_attn_func(ques, keys, vals, causal=True)
+    attn_output = flash_attn_func(
+        ques.transpose(1,2), 
+        keys.transpose(1,2), 
+        vals.transpose(1,2),
+        causal=True)[0].transpose(1,2)
     attn_output = attn_output.to(torch.bfloat16)
 
     attn_output = attn_output.transpose(1,2).flatten(2)

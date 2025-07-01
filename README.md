@@ -200,22 +200,23 @@ pip install -r requirement.txt
 
 2. SageAttention2
    ```bash
-   conda create -n transmla
+   conda create -n sageattn
    conda activate sageattn
    ```
    ```bash
-   cd thirdparty/SageAttention
+   克隆sage-attention官方代码仓库并进入
    python setup.py install
    ```
 
 3. FlashAttention FP8
    Enviromental requiremnt: `CUDA==12.8`
    ```bash
-   conda create -n transmla
+   conda create -n fp8
    conda activate fp8
    ```
+   安装PyTorch-2.6 + cu128、以及Transformers-4.45
    ```
-   cd thirdparty/flash-attention
+   # 克隆flash attention官方代码仓库，并cd进入
    git submodule update --init csrc/cutlass
    cd hopper
    python setup.py install

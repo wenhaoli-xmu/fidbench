@@ -140,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_gen", type=int, default=None)
     parser.add_argument("--label", type=str, default=None)
     parser.add_argument("--force-recompute", action='store_true')
+    parser.add_argument("--sample", action='store_true')
     args = parser.parse_args()
     
     with open(args.env_conf, "r") as f:
@@ -151,13 +152,13 @@ if __name__ == '__main__':
 
     tokenizer, model = get_model_and_tokenizer(**env_conf['model'])
     
-    for path in os.listdir('data'):
+    data_base_dir = 'data-sample' if args.sample else 'data-full'
+
+    for path in os.listdir(data_base_dir):
         if 'jsonl' not in path:
             continue
 
-        data_path = os.path.join('data', path)
-        out_path = os.path.join("pred", run_name, path)
-        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        data_path = os.path.join(data_base_dir, path)
 
         if args.label is not None:
             ref_path = os.path.join(args.label, path)
@@ -169,6 +170,8 @@ if __name__ == '__main__':
             acc5 = sum(acc5) / len(acc5)
             log_info(f"{path.replace('.jsonl', ''):^20}\t{colorize('yellow','Acc@1:')} {acc1:.5f}\t{colorize('yellow','Acc@5:')} {acc5:.5f}")
         else:
+            out_path = os.path.join("pred", run_name, path)
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
             if os.path.exists(out_path) and not args.force_recompute:
                 log_info(f"Skip {path} since {out_path} exists.")
                 continue

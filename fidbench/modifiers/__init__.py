@@ -14,7 +14,7 @@ def get_modifier(method: str):
         from .sage_attention import SageAttention
         return SageAttention
     
-    elif method == 'flash-attnention-fp8':
+    elif method == 'flash-attention-fp8':
         assert_transformer_version("4.45.0")
         from .flash_attention_fp8 import FlashAttnentionFP8
         return FlashAttnentionFP8
