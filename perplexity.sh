@@ -15,10 +15,10 @@ methods=(
 
     # low precision attn
     # "flash-attention-fp8"
-    # "sage-attention"
+    "sage-attention"
 
     # kv cache
-    "snapkv"
+    # "snapkv"
     # "h2o"
     # "topk"
 

@@ -70,7 +70,7 @@ class AWQMethod(Modifier):
         shift_labels = input_ids[:, 1:].contiguous()
 
         loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_logits.view(-1, shift_logits.size(-1)).to(shift_labels.device),
             shift_labels.view(-1),
             reduction='mean'
         )

@@ -25,7 +25,6 @@ def compute_ppl(
         model,
         data_path,
         model_max_length):
-    
 
     ppl_list = []
 
