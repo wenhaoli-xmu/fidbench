@@ -34,6 +34,11 @@ def get_modifier(method: str):
         from .h2o import H2O
         return H2O
     
+    elif method == 'topk':
+        assert_transformer_version('4.45.0')
+        from .topk import Topk
+        return Topk
+    
     elif method == 'gear':
         assert_transformer_version('4.37.2')
         from .gear import Gear
@@ -55,9 +60,14 @@ def get_modifier(method: str):
         return AWQMethod
     
     elif method == 'sparsegpt':
-        assert_transformer_version('4.45.0')
+        assert_transformer_version('4.37.2')
         from .sparsegpt import SparseGPT
         return SparseGPT
+    
+    elif method == 'wanda':
+        assert_transformer_version('4.37.2')
+        from .wanda import Wanda
+        return Wanda
     
     else:
         raise NotImplementedError(method)

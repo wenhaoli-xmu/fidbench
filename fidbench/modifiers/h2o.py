@@ -74,9 +74,13 @@ class Qwen2Attention_heavy_hitter(nn.Module):
 
         bsz, q_len, _ = hidden_states.size()
 
-        query_states = self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = self.k_proj(hidden_states).view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = self.v_proj(hidden_states).view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        try:
+            query_states = self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+            key_states = self.k_proj(hidden_states).view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+            value_states = self.v_proj(hidden_states).view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        except:
+            import IPython
+            IPython.embed(header='debug')
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -91,82 +95,80 @@ class Qwen2Attention_heavy_hitter(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        previous_scores = []
+        attn_output_list = []
+        attention_masks_next_list = []
 
-        if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.size()}"
-            )
+        num_heads = query_states.shape[1]
+        for head_idx in range(num_heads):
+            query_head = query_states[:, head_idx: head_idx + 1, ...]
+            key_head = key_states[:, head_idx: head_idx + 1, ...]
+            value_head = value_states[:, head_idx: head_idx + 1, ...]
 
-        if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
-                raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
-                )
-            attn_weights = attn_weights + attention_mask
-            attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
+            attn_weights = query_head @ key_head.transpose(-2,-1) / math.sqrt(self.head_dim)
 
-        if self.attention_masks_next is not None:
-            attn_weights = attn_weights * self.attention_masks_next + (1 - self.attention_masks_next) * torch.finfo(attn_weights.dtype).min
+            if attention_mask is None and q_len > 1:
+                seq_idx = torch.arange(q_len, dtype=torch.int64, device=hidden_states.device)
+                attention_mask = torch.where(seq_idx[:, None] >= seq_idx[None, :], 0, float('-inf')).to(hidden_states.dtype)[None, None, :, :]
+            
+            if attention_mask is not None:
+                attn_weights += attention_mask
+                attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
-        # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+            if self.attention_masks_next is not None:
+                attention_mask_next_head = self.attention_masks_next[:, head_idx: head_idx + 1]
+                attn_weights = attn_weights * attention_mask_next_head + (1 - attention_mask_next_head) * torch.finfo(attn_weights.dtype).min
 
-        # attn_weights (BS, heads, q-tokens, k-tokens) 16, 15, 15 // 16, 1, 16
-        current_scores_sum = attn_weights.sum(0).sum(1) # (heads, k-tokens)
-        # offset = attn_weights.gt(0).sum(0).sum(1)
+            attn_weights = nn.functional.softmax(attn_weights, dim=-1).to(query_states.dtype)
 
-        # Accumulate attention scores
-        if not self.previous_scores == None:
-            current_scores_sum[:, :-1] += self.previous_scores #(Enlarged Sequence)
-        else:
-            self.heavy_budget = int(self.heavy_budget_ratio * current_scores_sum.shape[-1])
-            self.recent_budget = int(self.recent_budget_ratio * current_scores_sum.shape[-1])
-            self.cache_budget = self.heavy_budget + self.recent_budget
-            self.cache_budget_records.append(self.cache_budget)
-            self.input_length.append(attn_weights.shape[-1])
+            current_scores_sum = attn_weights.sum(0).sum(1)
 
-            # current_scores_sum = current_scores_sum / offset
-        dtype_attn_weights = attn_weights.dtype
-        attn_weights_devices = attn_weights.device
-        assert attn_weights.shape[0] == 1
-        self.previous_scores = current_scores_sum #(heads, k-tokens)
-        attn_mask = torch.ones(current_scores_sum.shape[0], current_scores_sum.shape[1]+1).to(dtype_attn_weights).to(attn_weights_devices)
-
-        attn_tokens_all = self.previous_scores.shape[-1]
-    
-        if attn_tokens_all > self.cache_budget:
-            # activate most recent k-cache
-            if not self.recent_budget == 0:
-                attn_mask[:, :-self.recent_budget] = 0
-                selected_set = self.previous_scores[:, :-self.recent_budget]
+            if not self.previous_scores == None:
+                current_scores_sum[:, :-1] += self.previous_scores[head_idx: head_idx + 1]
             else:
-                # activate historical best self.cache_budget - self.recent_budget tokens.
-                # self.previous_scores # (k-Cache - 1)
-                attn_mask[:, :] = 0
-                selected_set = self.previous_scores
+                self.heavy_budget = int(self.heavy_budget_ratio * current_scores_sum.shape[-1])
+                self.recent_budget = int(self.recent_budget_ratio * current_scores_sum.shape[-1])
+                self.cache_budget = self.heavy_budget + self.recent_budget
+                self.cache_budget_records.append(self.cache_budget)
+                self.input_length.append(attn_weights.shape[-1])
 
-            if not self.heavy_budget == 0:
-                _, keep_topk = selected_set.topk(k=self.heavy_budget, dim=-1, largest=True)
-                attn_mask = attn_mask.scatter(-1, keep_topk, 1)
+            dtype_attn_weights = attn_weights.dtype
+            attn_weights_devices = attn_weights.device
 
-        self.attention_masks_next = attn_mask.clone().unsqueeze(0).unsqueeze(2)
+            previous_scores.append(current_scores_sum)
 
-        score_mask = attn_mask[:,:-1]
-        score_mask[:, -self.recent_budget:] = 1
-        self.previous_scores = self.previous_scores * score_mask
+            attn_mask = torch.ones(current_scores_sum.shape[0], current_scores_sum.shape[1]+1).to(dtype_attn_weights).to(attn_weights_devices)
 
-        attn_output = torch.matmul(attn_weights, value_states)
+            attn_tokens_all = previous_scores[-1].shape[-1]
+        
+            if attn_tokens_all > self.cache_budget:
+                if not self.recent_budget == 0:
+                    attn_mask[:, :-self.recent_budget] = 0
+                    selected_set = previous_scores[-1][:, :-self.recent_budget]
+                else:
+                    attn_mask[:, :] = 0
+                    selected_set = previous_scores[-1]
 
-        if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
+                if not self.heavy_budget == 0:
+                    _, keep_topk = selected_set.topk(k=self.heavy_budget, dim=-1, largest=True)
+                    attn_mask = attn_mask.scatter(-1, keep_topk, 1)
 
+            attention_masks_next_list.append(attn_mask.clone().unsqueeze(0).unsqueeze(2))
+
+            score_mask = attn_mask[:,:-1]
+            score_mask[:, -self.recent_budget:] = 1
+
+            previous_scores[-1] = previous_scores[-1] * score_mask
+
+            attn_output = torch.matmul(attn_weights, value_head)
+            attn_output_list.append(attn_output)
+        
+        attn_output = torch.cat(attn_output_list, dim=1)
         attn_output = attn_output.transpose(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+
+        self.attention_masks_next = torch.cat(attention_masks_next_list, dim=1)
+        self.previous_scores = torch.cat(previous_scores, dim=0)
 
         attn_output = self.o_proj(attn_output)
 
@@ -258,6 +260,7 @@ class H2O(Modifier):
         assert input_ids.shape[0] == 1, 'only support batch size 1'
         assert input_ids.ndim == 2
 
+        self.reset_mask()
         device = next(iter(self.model.parameters())).device
         input_ids = input_ids.to(device)
 
@@ -270,8 +273,7 @@ class H2O(Modifier):
         loss = F.cross_entropy(
             shift_logits.view(-1, shift_logits.size(-1)),
             shift_labels.view(-1),
-            reduction='mean'
-        )
+            reduction='mean')
 
         ppl = torch.exp(loss).item()
 

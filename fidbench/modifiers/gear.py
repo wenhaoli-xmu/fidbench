@@ -2944,7 +2944,7 @@ class Gear(Modifier):
             stream_grouping=self.conf['stream_grouping'])
         
         compress_config.copy_for_all_attention()
-        compress_config.calculate_compress_ratio_list(4095, 4096)
+        compress_config.calculate_compress_ratio_list(32768, model.config.hidden_size)
 
         model_name_or_path = model.config._name_or_path
         del model

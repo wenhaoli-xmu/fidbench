@@ -3,15 +3,15 @@
 max_gen=128
 
 bases=(
-    "qwen2.5-7b-instruct"
-    "qwen2.5-14b-instruct"
+    # "qwen2.5-7b-instruct"
+    # "qwen2.5-14b-instruct"
     "qwen2.5-32b-instruct"
 )
 
 methods=(
     # quant
     # "awq"
-    "gptq"
+    # "gptq"
 
     # low precision attn
     # "flash-attention-fp8"
@@ -20,6 +20,11 @@ methods=(
     # kv cache
     # "snapkv"
     # "h2o"
+    # "topk"
+
+    # sparse
+    "sparsegpt"
+    # "wanda"
 
     # others
     # "transmla"

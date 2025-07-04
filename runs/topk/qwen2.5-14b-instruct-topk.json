@@ -1,0 +1,14 @@
+{
+    "model": {
+        "model_name": "Qwen/Qwen2.5-14B-Instruct",
+        "model_dtype": "bf16",
+        "model_method": "topk",
+        "save_ckp": null,
+        "load_ckp": null,
+        "config": "config/topk.json",
+        "device_map": null,
+        "max_length": 131072
+    },
+
+    "generation_kwargs": {}
+}

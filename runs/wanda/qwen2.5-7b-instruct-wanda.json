@@ -1,0 +1,15 @@
+{
+    "model": {
+        "model_name": "/mnt/petrelfs/share_data/liwenhao/Qwen2.5-7B-Instruct-Wanda/",
+        "tokenizer_name": "/mnt/petrelfs/share_data/wangweiyun/share_ckpt_hf/Qwen2.5-7B-Instruct",
+        "model_dtype": "bf16",
+        "model_method": "wanda",
+        "save_ckp": null,
+        "load_ckp": null,
+        "config": null,
+        "device_map": null,
+        "max_length": 32768
+    },
+
+    "generation_kwargs": {}
+}
